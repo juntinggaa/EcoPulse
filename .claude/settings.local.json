@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(kill bm0cucmq3 *)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(wait bunbnj92i *)",
+      "Bash(xargs -I{} kill {})",
+      "Bash(xargs kill)",
+      "Bash(echo \"started pid=$!\")"
+    ]
+  }
+}
