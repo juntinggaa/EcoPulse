@@ -44,7 +44,7 @@ export default function LandingPage() {
           <div className="rounded-xl border border-slate-100 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-semibold">Ahmad Faizal → Semiconductor Assembly Operator</div>
+                <div className="font-semibold">Ahmad Faizal -&gt; Assembly Operator</div>
                 <div className="text-sm text-slate-500">
                   Penang Bayan Lepas · Semiconductors
                 </div>
@@ -52,7 +52,7 @@ export default function LandingPage() {
               <div className="text-2xl font-semibold text-brand-700">88%</div>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-600">
-              <span className="pill-slate">Skill ✓</span>
+              <span className="pill-slate">Skill fit</span>
               <span className="pill-slate">Same district</span>
               <span className="pill-slate">RM 2,200</span>
             </div>
@@ -60,7 +60,7 @@ export default function LandingPage() {
           <div className="rounded-xl border border-slate-100 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-semibold">Tan Wei Ming → Warehouse Assistant</div>
+                <div className="font-semibold">Lim Wei Ming -&gt; Warehouse Assistant</div>
                 <div className="text-sm text-slate-500">
                   Klang Valley · Logistics
                 </div>
@@ -68,7 +68,7 @@ export default function LandingPage() {
               <div className="text-2xl font-semibold text-brand-700">82%</div>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-600">
-              <span className="pill-slate">Forklift ✓</span>
+              <span className="pill-slate">Forklift cert</span>
               <span className="pill-slate">Same state</span>
               <span className="pill-slate">Available now</span>
             </div>
@@ -76,17 +76,17 @@ export default function LandingPage() {
           <div className="rounded-xl border border-slate-100 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-semibold">Priya Devi → QC Trainee (SKM L2)</div>
+                <div className="font-semibold">Priya Nair -&gt; QC Trainee (SKM L2)</div>
                 <div className="text-sm text-slate-500">
-                  Johor Pasir Gudang · TVET funded
+                  Penang Bayan Lepas · TVET funded
                 </div>
               </div>
               <div className="text-2xl font-semibold text-brand-700">76%</div>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-600">
-              <span className="pill-slate">HRD Corp ✓</span>
-              <span className="pill-slate">Flex hours</span>
-              <span className="pill-slate">Needs upskill</span>
+              <span className="pill-slate">HRD Corp</span>
+              <span className="pill-amber">Training at risk</span>
+              <span className="pill-slate">42% training attendance</span>
             </div>
           </div>
         </div>

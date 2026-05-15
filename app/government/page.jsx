@@ -21,15 +21,30 @@ import {
   trainingCompletionTrend,
   matchOutcomes,
   placementByState,
-  workerPipeline,
-  placementEconomics,
   trainingROI,
   youthUnemploymentTrend,
   topEmployers,
+  trainingToPlacementFunnel,
+  atRiskTrainingRows,
+  stateOutcomeBreakdown,
+  sectorOutcomeBreakdown,
 } from "@/lib/mockData";
 import StatCard from "@/components/StatCard";
 
 const SECTOR_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
+
+function riskPillClass(level) {
+  const value = level.toLowerCase();
+  if (value.includes("high")) return "pill-red";
+  if (value.includes("risk")) return "pill-amber";
+  return "pill-slate";
+}
+
+function retentionPillClass(value) {
+  if (value >= 70) return "pill-green";
+  if (value >= 60) return "pill-amber";
+  return "pill-red";
+}
 
 export default function GovernmentDashboard() {
   const m = governmentMetrics;
@@ -39,12 +54,12 @@ export default function GovernmentDashboard() {
         <div>
           <span className="pill-amber">Government Dashboard · MOHR / HRD Corp view</span>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">
-            Track B40 youth employment outcomes in real time
+            Placement and retention dashboard
           </h1>
           <p className="mt-1 text-sm text-slate-500 max-w-2xl">
             Aggregated view of verified B40 workers, HRD Corp training
-            enrolments, MyFutureJobs placements, and 30-day retention across
-            Malaysia&apos;s pilot states.
+            enrolments, training attendance risk, MyFutureJobs placements, and
+            30-day retention across Malaysia&apos;s pilot states.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -53,21 +68,15 @@ export default function GovernmentDashboard() {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard
-          label="B40 verified workers"
+          label="Verified workers"
           value={m.verifiedWorkers.toLocaleString()}
           sub="MyKad + skill profile"
           accent="brand"
         />
         <StatCard
-          label="Verified Sdn Bhd employers"
-          value={m.verifiedEmployers}
-          sub="SSM licence + payment"
-          accent="blue"
-        />
-        <StatCard
-          label="HRD Corp enrolments"
+          label="Training enrolments"
           value={m.trainingEnrolments}
           sub="Levy-claimable pathways"
           accent="amber"
@@ -79,7 +88,7 @@ export default function GovernmentDashboard() {
           accent="slate"
         />
         <StatCard
-          label="Verified placements"
+          label="Successful placements"
           value={m.successfulPlacements}
           sub="MyFutureJobs cross-checked"
           accent="brand"
@@ -91,32 +100,26 @@ export default function GovernmentDashboard() {
           accent="blue"
         />
         <StatCard
-          label="Youth employment MoM"
-          value={`+${m.youthEmploymentMoM}%`}
-          sub="Month-on-month, B40 cohort"
-          accent="amber"
-        />
-        <StatCard
-          label="Avg time-to-hire"
-          value="9 days"
-          sub="Verified profile → placement"
-          accent="slate"
+          label="At-risk trainees"
+          value={m.atRiskTrainees}
+          sub="Training attendance below threshold"
+          accent="red"
         />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="card p-6 lg:col-span-2">
-          <h2 className="text-lg font-semibold">Worker journey funnel</h2>
+      <div>
+        <div className="card p-6">
+          <h2 className="text-lg font-semibold">Training-to-Placement Funnel</h2>
           <p className="text-sm text-slate-500">
-            From registration to 30-day retention — every drop-off tells HRD
-            Corp and MOHR where to intervene.
+            Matched workers move through funded training, training attendance,
+            completion, job placement, work attendance, and 30-day retention.
           </p>
-          <div className="mt-4 h-72">
+          <div className="mt-4 h-[420px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={workerPipeline}
+                data={trainingToPlacementFunnel}
                 layout="vertical"
-                margin={{ left: 20, right: 30 }}
+                margin={{ left: 40, right: 40 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis type="number" fontSize={12} stroke="#64748b" />
@@ -129,7 +132,7 @@ export default function GovernmentDashboard() {
                 />
                 <Tooltip />
                 <Bar dataKey="count" radius={[0, 6, 6, 0]}>
-                  {workerPipeline.map((_, i) => (
+                  {trainingToPlacementFunnel.map((_, i) => (
                     <Cell
                       key={i}
                       fill={`hsl(${158 - i * 8}, 70%, ${50 - i * 2}%)`}
@@ -140,66 +143,102 @@ export default function GovernmentDashboard() {
             </ResponsiveContainer>
           </div>
           <div className="mt-2 text-xs text-slate-500">
-            Conversion: {Math.round((workerPipeline[6].count / workerPipeline[0].count) * 100)}% of
-            registered workers retained at 30 days · sharpest drop is{" "}
-            <strong>Skill-profiled → Trained</strong> (training capacity is the
-            current bottleneck).
+            Conversion: {Math.round(
+              (trainingToPlacementFunnel[5].count / trainingToPlacementFunnel[0].count) *
+                100
+            )}% of verified workers retained at 30 days. Training attendance is
+            monitored before completion; work attendance starts only after job
+            placement.
           </div>
         </div>
 
-        <div className="card p-6 flex flex-col">
-          <h2 className="text-lg font-semibold">Cost per placement</h2>
-          <p className="text-sm text-slate-500">
-            EcoPulse vs traditional blue-collar recruiter / agency channels.
-          </p>
-          <div className="mt-5 rounded-2xl bg-slate-900 text-slate-50 p-5">
-            <div className="text-xs uppercase tracking-wider text-slate-300">
-              EcoPulse
-            </div>
-            <div className="mt-1 text-4xl font-bold tabular-nums">
-              RM {placementEconomics.ecoPulseCostPerPlacement}
-            </div>
-            <div className="mt-1 text-xs text-slate-300">
-              per verified placement
-            </div>
+        {/* Cost per placement is intentionally hidden until pricing is validated. */}
+      </div>
+
+      <div className="card p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">At-risk training panel</h2>
+            <p className="text-sm text-slate-500">
+              These alerts are about funded programme attendance, not job
+              attendance. Work attendance starts only after placement.
+            </p>
           </div>
-          <div className="mt-3 rounded-xl bg-slate-100 p-4">
-            <div className="text-xs uppercase tracking-wider text-slate-500">
-              Traditional agency
-            </div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-700">
-              RM {placementEconomics.traditionalAgencyCost.toLocaleString()}
-            </div>
-            <div className="mt-1 text-xs text-slate-500">
-              per blue-collar hire (industry baseline)
-            </div>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-lg bg-emerald-50 p-3">
-              <div className="text-emerald-700 font-semibold">
-                {Math.round(
-                  (1 -
-                    placementEconomics.ecoPulseCostPerPlacement /
-                      placementEconomics.traditionalAgencyCost) *
-                    100
-                )}
-                % cheaper
-              </div>
-              <div className="text-emerald-700/80">than agencies</div>
-            </div>
-            <div className="rounded-lg bg-blue-50 p-3">
-              <div className="text-blue-700 font-semibold">
-                +{placementEconomics.retentionUpliftPP} pp
-              </div>
-              <div className="text-blue-700/80">retention uplift</div>
-            </div>
-          </div>
-          <div className="mt-3 text-xs text-slate-500">
-            HRD Corp levy claimable: RM{" "}
-            {placementEconomics.hrdCorpLevyClaimable} avg per trained
-            placement — employer net cost approaches zero.
-          </div>
+          <span className="pill-amber">Training attendance watchlist</span>
         </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                <th className="py-2 pr-4">Worker</th>
+                <th className="py-2 pr-4">Programme</th>
+                <th className="py-2 pr-4">Training Attendance</th>
+                <th className="py-2 pr-4">Risk Level</th>
+                <th className="py-2 pr-4">Intervention</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {atRiskTrainingRows.map((row) => (
+                <tr key={row.worker}>
+                  <td className="py-3 pr-4 font-medium">{row.worker}</td>
+                  <td className="py-3 pr-4">{row.programme}</td>
+                  <td className="py-3 pr-4 tabular-nums">
+                    {row.attendance}%
+                  </td>
+                  <td className="py-3 pr-4">
+                    <span className={riskPillClass(row.riskLevel)}>
+                      {row.riskLevel}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-4">{row.intervention}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {[
+          ["State breakdown", stateOutcomeBreakdown],
+          ["Sector breakdown", sectorOutcomeBreakdown],
+        ].map(([title, rows]) => (
+          <div key={title} className="card p-6">
+            <h2 className="text-lg font-semibold">{title}</h2>
+            <p className="text-sm text-slate-500">
+              Workers verified, training completed, placements, and 30-day
+              retention.
+            </p>
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                    <th className="py-2 pr-4">Name</th>
+                    <th className="py-2 pr-4">Workers verified</th>
+                    <th className="py-2 pr-4">Training completed</th>
+                    <th className="py-2 pr-4">Placements</th>
+                    <th className="py-2 pr-4">30-day retention</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {rows.map((row) => (
+                    <tr key={row.name}>
+                      <td className="py-3 pr-4 font-medium">{row.name}</td>
+                      <td className="py-3 pr-4">{row.workersVerified}</td>
+                      <td className="py-3 pr-4">{row.trainingCompleted}</td>
+                      <td className="py-3 pr-4">{row.placements}</td>
+                      <td className="py-3 pr-4">
+                        <span className={retentionPillClass(row.retention30Day)}>
+                          {row.retention30Day}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">

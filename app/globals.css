@@ -28,6 +28,9 @@ body {
   .pill-amber {
     @apply pill bg-amber-50 text-amber-700 ring-1 ring-amber-200;
   }
+  .pill-red {
+    @apply pill bg-red-50 text-red-700 ring-1 ring-red-200;
+  }
   .pill-slate {
     @apply pill bg-slate-100 text-slate-700 ring-1 ring-slate-200;
   }

@@ -18,6 +18,31 @@ const WEIGHT_ROWS = [
   { key: "reliability", label: "Reliability score", desc: "Past placement / retention signal" },
 ];
 
+const MATCH_REASON_EXAMPLES = [
+  {
+    title: "Ahmad Faizal -> Assembly Operator",
+    status: "Low retention risk",
+    pill: "pill-green",
+    reasons: [
+      "Strong skill match",
+      "Location fit: Penang Bayan Lepas",
+      "Salary expectation aligned",
+      "Training completed",
+    ],
+  },
+  {
+    title: "Priya Nair -> QC Trainee",
+    status: "Training at risk",
+    pill: "pill-amber",
+    reasons: [
+      "Good skill potential",
+      "Training pathway aligned",
+      "Training attendance is low",
+      "Complete training pathway before placement",
+    ],
+  },
+];
+
 export default function MatchingEnginePage() {
   const [workerId, setWorkerId] = useState(workers[0].id);
   const [jobId, setJobId] = useState(jobs[0].id);
@@ -45,8 +70,10 @@ export default function MatchingEnginePage() {
           The AI logic behind every recommendation
         </h1>
         <p className="mt-1 text-sm text-slate-500 max-w-2xl">
-          MVP rule-based matching model — designed to evolve into machine-learning
-          prediction as placement and retention data grows.
+          EcoPulse starts with rule-based matching because it is explainable,
+          auditable, and suitable for early-stage pilot data. As verified
+          placement and retention data grows, the model can evolve into
+          retention prediction and training ROI analysis.
         </p>
         <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-white/70 p-4 text-sm text-slate-600 max-w-3xl">
           <strong className="text-slate-800">Who sees this page?</strong>{" "}
@@ -85,6 +112,34 @@ export default function MatchingEnginePage() {
                   {Math.round(MATCHING_WEIGHTS[row.key] * 100)}%
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Match reason examples</h2>
+            <p className="text-sm text-slate-500">
+              Each recommendation explains why a worker fits, whether training
+              is needed, and whether there is a risk flag.
+            </p>
+          </div>
+          <span className="pill-blue">Explainable matching</span>
+        </div>
+        <div className="mt-4 grid md:grid-cols-2 gap-4">
+          {MATCH_REASON_EXAMPLES.map((example) => (
+            <div key={example.title} className="rounded-xl border border-slate-100 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="font-semibold">{example.title}</div>
+                <span className={example.pill}>{example.status}</span>
+              </div>
+              <ul className="mt-3 space-y-1 text-sm text-slate-600">
+                {example.reasons.map((reason) => (
+                  <li key={reason}>- {reason}</li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>

@@ -3,6 +3,7 @@ export default function StatCard({ label, value, sub, accent = "brand" }) {
     brand: "text-brand-700 bg-brand-50",
     blue: "text-blue-700 bg-blue-50",
     amber: "text-amber-700 bg-amber-50",
+    red: "text-red-700 bg-red-50",
     slate: "text-slate-700 bg-slate-100",
   };
   return (

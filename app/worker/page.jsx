@@ -29,6 +29,34 @@ function parseList(value) {
     .filter(Boolean);
 }
 
+function statusPillClass(status) {
+  const value = (status || "").toLowerCase();
+  if (
+    value.includes("completed") ||
+    value.includes("ready") ||
+    value.includes("hired") ||
+    value.includes("retained")
+  ) {
+    return "pill-green";
+  }
+  if (value.includes("risk") || value.includes("progress") || value.includes("almost")) {
+    return "pill-amber";
+  }
+  if (value.includes("dropped") || value.includes("high")) {
+    return "pill-red";
+  }
+  return "pill-slate";
+}
+
+function trainingStatusLabel(worker) {
+  if (worker.trainingAttendance == null) return worker.trainingStatus;
+  if (worker.trainingStatus === "Training at risk") {
+    return `Training at risk · ${worker.trainingAttendance}% attendance`;
+  }
+  if (worker.trainingStatus === "Completed") return "Completed";
+  return `${worker.trainingStatus} · ${worker.trainingAttendance}% attendance`;
+}
+
 export default function WorkerPortal() {
   const [worker, setWorker] = useState(initialWorkers[0]);
 
@@ -51,7 +79,7 @@ export default function WorkerPortal() {
         <div>
           <span className="pill-green">Worker Portal</span>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">
-            Build your verified profile, see your matched jobs
+            Build your Verified Skills Passport, see your matched jobs
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             Live demo with sample worker <strong>{worker.name}</strong>. Tweak
@@ -78,7 +106,7 @@ export default function WorkerPortal() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="card p-6 lg:col-span-2">
-          <h2 className="text-lg font-semibold">Worker application profile</h2>
+          <h2 className="text-lg font-semibold">Verified Skills Passport</h2>
           <div className="mt-4 grid sm:grid-cols-2 gap-4">
             <div>
               <label className="field-label">Full name</label>
@@ -97,7 +125,16 @@ export default function WorkerPortal() {
               />
             </div>
             <div>
-              <label className="field-label">ID verification</label>
+              <label className="field-label">Age</label>
+              <input
+                type="number"
+                className="field"
+                value={worker.age}
+                onChange={(e) => update({ age: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label className="field-label">Identity verification status</label>
               <select
                 className="field"
                 value={worker.verification.idDocument}
@@ -125,14 +162,14 @@ export default function WorkerPortal() {
                 value={worker.preferredJobType}
                 onChange={(e) => update({ preferredJobType: e.target.value })}
               >
-                <option value="Manufacturing operator">
-                  Manufacturing operator
+                <option value="Assembly Operator">
+                  Assembly Operator
                 </option>
-                <option value="Warehouse / logistics">
-                  Warehouse / logistics
+                <option value="Warehouse Assistant">
+                  Warehouse Assistant
                 </option>
-                <option value="Quality control trainee">
-                  Quality control trainee
+                <option value="QC Trainee">
+                  QC Trainee
                 </option>
                 <option value="Construction / site work">
                   Construction / site work
@@ -145,6 +182,14 @@ export default function WorkerPortal() {
                 </option>
                 <option value="Flexible / open">Flexible / open</option>
               </select>
+            </div>
+            <div>
+              <label className="field-label">Recommended job</label>
+              <input
+                className="field"
+                value={worker.recommendedRole}
+                onChange={(e) => update({ recommendedRole: e.target.value })}
+              />
             </div>
             <div className="sm:col-span-2">
               <label className="field-label">Skills</label>
@@ -179,6 +224,7 @@ export default function WorkerPortal() {
               >
                 <option value="full-time">Full-time</option>
                 <option value="part-time">Part-time</option>
+                <option value="shift work">Shift work</option>
                 <option value="flexible">Flexible</option>
               </select>
             </div>
@@ -243,13 +289,49 @@ export default function WorkerPortal() {
             />
           </div>
           <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm">
-            <div className="font-medium text-slate-700">Reliability score</div>
+            <div className="font-medium text-slate-700">Reliability signal</div>
             <div className="mt-2">
               <ScoreBar score={worker.reliabilityScore} />
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Based on prior placements, attendance, and employer feedback.
+              Based on prior placements, work attendance, and employer feedback.
             </p>
+          </div>
+          <div className="mt-5 rounded-xl border border-slate-100 p-4 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <div className="font-medium text-slate-700">Training progress</div>
+              <span className={statusPillClass(worker.trainingStatus)}>
+                {trainingStatusLabel(worker)}
+              </span>
+            </div>
+            <div className="mt-3 text-xs text-slate-500">
+              {worker.trainingProgram}
+            </div>
+            {worker.trainingAttendance != null && (
+              <div className="mt-3">
+                <div className="mb-1 text-xs text-slate-500">
+                  Training attendance
+                </div>
+                <ScoreBar score={worker.trainingAttendance} />
+              </div>
+            )}
+          </div>
+          <div className="mt-5 rounded-xl border border-slate-100 p-4 text-sm">
+            <div className="font-medium text-slate-700">Work readiness status</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className={statusPillClass(worker.workReadiness)}>
+                {worker.workReadiness}
+              </span>
+              <span className={statusPillClass(worker.hiringStatus)}>
+                {worker.hiringStatus}
+              </span>
+            </div>
+            <div className="mt-3 text-xs text-slate-500">
+              Recommended action
+            </div>
+            <div className="mt-1 font-medium text-slate-800">
+              {worker.suggestedAction}
+            </div>
           </div>
         </div>
       </div>
@@ -298,7 +380,7 @@ export default function WorkerPortal() {
                   <ScoreBar score={score} />
                   <span className="pill-green">{workerActionLabel(score)}</span>
                   <Link href={msgHref} className="btn-ghost text-xs px-3 py-1.5">
-                    💬 Message HR
+                    Message HR
                   </Link>
                 </div>
               </div>

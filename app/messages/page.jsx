@@ -7,7 +7,7 @@ import {
   workers,
   jobs,
   employerQuickActions,
-  workerQuickReplies,
+  workerQuickDrafts,
   trainingProgress,
 } from "@/lib/mockData";
 
@@ -34,6 +34,9 @@ function MessagesView() {
   const [drafts, setDrafts] = useState({});
   const [extra, setExtra] = useState({});
   const [enrolled, setEnrolled] = useState({});
+  const [drafting, setDrafting] = useState(null); // scenario id currently being drafted by AI
+  const [aiError, setAiError] = useState(null);
+  const [customIntent, setCustomIntent] = useState("");
 
   const thread = messageThreads.find((t) => t.id === activeId);
   const worker = workers.find((w) => w.id === thread.workerId);
@@ -66,8 +69,11 @@ function MessagesView() {
     setDrafts((d) => ({ ...d, [thread.id]: "" }));
   };
 
-  const useEmployerTemplate = (template) => {
-    const filled = template
+  // Static template fill — instant fallback if AI draft fails (employer only).
+  const fillStaticTemplate = (scenarioId) => {
+    const action = employerQuickActions.find((q) => q.id === scenarioId);
+    if (!action) return;
+    const filled = action.template
       .replaceAll("{worker}", worker.name.split(" ")[0])
       .replaceAll("{location}", job.location)
       .replaceAll(
@@ -75,6 +81,65 @@ function MessagesView() {
         tp?.pathway || "HRD Corp Claimable · CNC Machining Basics"
       );
     setDrafts((d) => ({ ...d, [thread.id]: filled }));
+  };
+
+  // Live AI draft via DeepSeek (server-side proxy at /api/draft-reply).
+  // Works for both worker and employer sides; supports a free-form `userIntent`.
+  const draftReply = async (scenarioId, userIntent = null) => {
+    setDrafting(scenarioId);
+    setAiError(null);
+    try {
+      const res = await fetch("/api/draft-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenario: scenarioId,
+          audience: view, // who is writing the message
+          userIntent,
+          worker: {
+            name: worker.name,
+            age: worker.age,
+            location: worker.location,
+            skills: worker.skills,
+            reliabilityScore: worker.reliabilityScore,
+            availability: worker.availability,
+          },
+          job: {
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            salary: job.salary,
+            workingHours: job.workingHours,
+            housingSupport: job.housingSupport,
+            trainingProvided: job.trainingProvided,
+          },
+          training: tp || null,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.draft) {
+        setDrafts((d) => ({ ...d, [thread.id]: data.draft }));
+        if (scenarioId === "custom") setCustomIntent("");
+      } else {
+        setAiError(data.error || "AI draft unavailable.");
+        // Only employer quick-actions have a static fallback.
+        if (view === "employer" && scenarioId !== "custom") {
+          fillStaticTemplate(scenarioId);
+        }
+      }
+    } catch (err) {
+      setAiError("Network error.");
+      if (view === "employer" && scenarioId !== "custom") {
+        fillStaticTemplate(scenarioId);
+      }
+    } finally {
+      setDrafting(null);
+    }
+  };
+
+  const handleCustomDraft = () => {
+    if (!customIntent.trim() || drafting) return;
+    draftReply("custom", customIntent.trim());
   };
 
   const enrol = (msgId, pathway) => {
@@ -98,7 +163,7 @@ function MessagesView() {
           <p className="mt-1 text-sm text-slate-500 max-w-2xl">
             EcoPulse AI sits inside the thread — suggesting training, drafting
             employer messages, giving workers 1-click actions, and surfacing
-            training progress + attendance alerts. Every interaction is logged
+            training progress + training attendance alerts. Every interaction is logged
             for HRD Corp audit.
           </p>
         </div>
@@ -217,33 +282,15 @@ function MessagesView() {
           </div>
 
           <footer className="border-t border-slate-100 p-4 space-y-3">
-            {view === "employer" ? (
-              <div className="flex flex-wrap gap-2">
-                {employerQuickActions.map((q) => (
-                  <button
-                    key={q.id}
-                    onClick={() => useEmployerTemplate(q.template)}
-                    className="rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 ring-1 ring-brand-200 hover:bg-brand-100"
-                  >
-                    + {q.label}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {workerQuickReplies.map((r) => (
-                  <button
-                    key={r}
-                    onClick={() =>
-                      setDrafts((d) => ({ ...d, [thread.id]: r }))
-                    }
-                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200"
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            )}
+            <DraftBar
+              view={view}
+              drafting={drafting}
+              aiError={aiError}
+              customIntent={customIntent}
+              setCustomIntent={setCustomIntent}
+              onQuickDraft={(id) => draftReply(id)}
+              onCustomDraft={handleCustomDraft}
+            />
             <div className="flex items-end gap-2">
               <textarea
                 rows={2}
@@ -288,9 +335,9 @@ function TrainingProgressCard({ tp, workerName }) {
   const statusStyles = {
     enrolled: { label: "Enrolled · not started", pill: "pill-blue", bar: "bg-blue-500" },
     in_progress: { label: "In progress", pill: "pill-green", bar: "bg-emerald-500" },
-    at_risk: { label: "⚠ At risk · low attendance", pill: "pill-amber", bar: "bg-amber-500" },
-    completed: { label: "✓ Completed", pill: "pill-green", bar: "bg-emerald-600" },
-    dropped: { label: "Dropped out", pill: "pill-slate", bar: "bg-slate-400" },
+    at_risk: { label: "Training at risk · low attendance", pill: "pill-amber", bar: "bg-amber-500" },
+    completed: { label: "Completed", pill: "pill-green", bar: "bg-emerald-600" },
+    dropped: { label: "Dropped out", pill: "pill-red", bar: "bg-red-500" },
   };
   const s = statusStyles[tp.status] || statusStyles.enrolled;
   const isRisk = tp.status === "at_risk" || tp.status === "dropped";
@@ -327,7 +374,7 @@ function TrainingProgressCard({ tp, workerName }) {
           </div>
         </div>
         <div>
-          <div className="text-xs text-slate-500">Attendance</div>
+          <div className="text-xs text-slate-500">Training attendance</div>
           <div
             className={`mt-0.5 font-semibold ${
               tp.attendance < 70 ? "text-amber-700" : "text-emerald-700"
@@ -381,7 +428,7 @@ function MessageBubble({ m, view, worker, enrolled, onEnrol }) {
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {enrolled ? (
                 <span className="pill-green">
-                  ✓ Enrolled · {m.action.pathway}
+                  Enrolled · {m.action.pathway}
                 </span>
               ) : view === "worker" ? (
                 <button
@@ -399,7 +446,7 @@ function MessageBubble({ m, view, worker, enrolled, onEnrol }) {
           )}
           {m.action?.kind === "interview" && (
             <div className="mt-2 text-xs text-slate-600">
-              📅 Interview held: {m.action.date} · {m.action.time}
+              Interview held: {m.action.date} · {m.action.time}
             </div>
           )}
         </div>
@@ -431,6 +478,80 @@ function MessageBubble({ m, view, worker, enrolled, onEnrol }) {
         </div>
         <div className="whitespace-pre-line">{m.text}</div>
       </div>
+    </div>
+  );
+}
+
+function DraftBar({
+  view,
+  drafting,
+  aiError,
+  customIntent,
+  setCustomIntent,
+  onQuickDraft,
+  onCustomDraft,
+}) {
+  const quickList =
+    view === "employer" ? employerQuickActions : workerQuickDrafts;
+  const placeholder =
+    view === "employer"
+      ? 'Or type custom intent — e.g. "ask about her dorm preference and shift availability"'
+      : 'Or type custom intent — e.g. "ask about overtime pay and dorm options"';
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          ✨ AI quick-drafts
+        </span>
+        {quickList.map((q) => {
+          const isLoading = drafting === q.id;
+          return (
+            <button
+              key={q.id}
+              onClick={() => onQuickDraft(q.id)}
+              disabled={drafting !== null}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium ring-1 transition ${
+                isLoading
+                  ? "bg-brand-600 text-white ring-brand-600 animate-pulse"
+                  : "bg-brand-50 text-brand-700 ring-brand-200 hover:bg-brand-100 disabled:opacity-50"
+              }`}
+            >
+              {isLoading ? "✨ Drafting with DeepSeek…" : `✨ ${q.label}`}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-stretch gap-2">
+        <input
+          type="text"
+          className="field flex-1 text-sm"
+          placeholder={placeholder}
+          value={customIntent}
+          onChange={(e) => setCustomIntent(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && customIntent.trim() && !drafting) {
+              e.preventDefault();
+              onCustomDraft();
+            }
+          }}
+          disabled={drafting !== null}
+        />
+        <button
+          onClick={onCustomDraft}
+          disabled={!customIntent.trim() || drafting !== null}
+          className={`rounded-lg px-4 py-2 text-xs font-semibold ring-1 transition whitespace-nowrap ${
+            drafting === "custom"
+              ? "bg-brand-600 text-white ring-brand-600 animate-pulse"
+              : "bg-brand-600 text-white ring-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          }`}
+        >
+          {drafting === "custom" ? "✨ Drafting…" : "✨ Draft with AI"}
+        </button>
+      </div>
+      {aiError && (
+        <div className="text-[11px] text-amber-700">{aiError}</div>
+      )}
     </div>
   );
 }
