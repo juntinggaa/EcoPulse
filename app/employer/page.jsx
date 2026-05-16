@@ -1,14 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   jobs as initialJobs,
+  workers,
+  messageThreads,
   candidateJourneyRows,
   employerDashboardMetrics,
 } from "@/lib/mockData";
+import { rankWorkersForJob, suggestedAction } from "@/lib/matching";
 import StatCard from "@/components/StatCard";
 import ScoreBar from "@/components/ScoreBar";
 import VerificationItem from "@/components/VerificationItem";
+
+function threadFor(workerId, jobId) {
+  return messageThreads.find(
+    (t) => t.workerId === workerId && t.jobId === jobId
+  );
+}
 
 function statusPillClass(status) {
   const value = (status || "").toLowerCase();
@@ -57,6 +67,12 @@ export default function EmployerPortal() {
   const [job, setJob] = useState(initialJobs[0]);
   const update = (patch) => setJob((j) => ({ ...j, ...patch }));
   const m = employerDashboardMetrics;
+
+  const [shortlisted, setShortlisted] = useState({});
+  const ranked = useMemo(() => rankWorkersForJob(job, workers), [job]);
+  const toggleShortlist = (id) =>
+    setShortlisted((s) => ({ ...s, [id]: !s[id] }));
+  const shortlistCount = Object.values(shortlisted).filter(Boolean).length;
 
   return (
     <div className="space-y-8">
@@ -238,18 +254,128 @@ export default function EmployerPortal() {
         </div>
       </div>
 
+      {/* STAGE 1 — Discovery: AI sources & ranks, employer decides */}
+      <div className="card p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <span className="pill-amber">Stage 1 · Discover</span>
+            <h2 className="mt-2 text-lg font-semibold">
+              New AI matches — sourced &amp; ranked for this role
+            </h2>
+            <p className="text-sm text-slate-500 max-w-2xl">
+              You don&apos;t search. EcoPulse auto-sources verified candidates
+              for your posted job and ranks them by fit. Review the AI&apos;s
+              reasoning, then shortlist or message — you decide who to engage.
+              Edit the job above and this list re-ranks instantly.
+            </p>
+          </div>
+          <span className="pill-blue">
+            {ranked.length} matches · {shortlistCount} shortlisted
+          </span>
+        </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                <th className="py-2 pr-4">Worker</th>
+                <th className="py-2 pr-4">Skills</th>
+                <th className="py-2 pr-4">Location</th>
+                <th className="py-2 pr-4">Reliability</th>
+                <th className="py-2 pr-4 min-w-[160px]">Match score</th>
+                <th className="py-2 pr-4">AI suggests</th>
+                <th className="py-2 pr-4">Decision</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {ranked.map(({ worker, score, reason }) => {
+                const t = threadFor(worker.id, job.id);
+                const msgHref = t
+                  ? `/messages?thread=${t.id}&view=employer`
+                  : "/messages?view=employer";
+                const isShort = !!shortlisted[worker.id];
+                return (
+                  <tr key={worker.id} className="align-top">
+                    <td className="py-3 pr-4">
+                      <div className="font-medium">{worker.name}</div>
+                      <div className="text-xs text-slate-500">
+                        {worker.age} · {worker.availability}
+                      </div>
+                    </td>
+                    <td className="py-3 pr-4 max-w-[240px]">
+                      <div className="flex flex-wrap gap-1">
+                        {worker.skills.map((s) => (
+                          <span key={s} className="pill-slate">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {reason}
+                      </div>
+                    </td>
+                    <td className="py-3 pr-4">{worker.location}</td>
+                    <td className="py-3 pr-4">
+                      <ScoreBar score={worker.reliabilityScore} />
+                    </td>
+                    <td className="py-3 pr-4">
+                      <ScoreBar score={score} />
+                    </td>
+                    <td className="py-3 pr-4">
+                      <span className="pill-amber">
+                        {suggestedAction(score)}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4">
+                      <div className="flex flex-col gap-1.5 min-w-[150px]">
+                        <button
+                          onClick={() => toggleShortlist(worker.id)}
+                          className={
+                            isShort
+                              ? "rounded-lg px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white"
+                              : "rounded-lg px-3 py-1.5 text-xs font-semibold ring-1 ring-slate-300 text-slate-700 hover:bg-slate-50"
+                          }
+                        >
+                          {isShort
+                            ? "✓ Shortlisted → in pipeline"
+                            : "+ Shortlist"}
+                        </button>
+                        <Link
+                          href={msgHref}
+                          className="rounded-lg px-3 py-1.5 text-xs font-semibold ring-1 ring-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 text-center"
+                        >
+                          💬 Message
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          Shortlisted candidates move into the pipeline tracker below, where
+          EcoPulse follows them from training → placement → 30/60/90-day
+          retention.
+        </p>
+      </div>
+
+      {/* STAGE 2 — Pipeline: candidates the employer has engaged */}
       <div className="card p-6">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">Candidate journey dashboard</h2>
+            <span className="pill-amber">Stage 2 · Track</span>
+            <h2 className="mt-2 text-lg font-semibold">
+              In pipeline — candidates you&apos;ve engaged
+            </h2>
             <p className="text-sm text-slate-500">
-              EcoPulse separates training attendance from work attendance.
-              Training attendance tracks whether a worker is completing a
-              funded training pathway. Work attendance starts only after the
-              worker is placed into a job.
+              Once shortlisted, EcoPulse separates training attendance from
+              work attendance. Training attendance tracks whether a worker is
+              completing a funded training pathway. Work attendance starts only
+              after the worker is placed into a job.
             </p>
             <p className="mt-2 text-xs text-slate-500 max-w-2xl">
-              The hiring view tracks each worker from matched to training
+              This view tracks each engaged worker from matched to training
               enrolled, training attendance, completion, placement, work
               attendance, and 30/60/90-day retention.
             </p>
