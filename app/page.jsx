@@ -20,7 +20,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="/worker" className="btn-primary">
-              Worker Portal
+              Job Seeker
             </Link>
             <Link href="/employer" className="btn-ghost">
               Employer Portal
@@ -102,11 +102,11 @@ export default function LandingPage() {
       <section className="grid md:grid-cols-3 gap-6">
         {[
           {
-            tag: "Workers",
+            tag: "Job seekers",
             color: "pill-green",
             title: "Verified jobs + HRD Corp / TVET training",
             body: "Malaysian youth get a verified profile, AI job recommendations across Penang / Selangor / Johor, and access to HRD Corp Claimable and SKM-recognised training pathways that lift their match score.",
-            cta: "Open Worker Portal",
+            cta: "Open Job Seeker",
             href: "/worker",
           },
           {
@@ -151,10 +151,10 @@ export default function LandingPage() {
         </div>
         <ol className="mt-6 grid md:grid-cols-3 gap-4 text-sm">
           {[
-            "Worker creates a verified profile",
+            "Job seeker creates a verified profile",
             "Employer posts a verified blue-collar job",
             "EcoPulse scores worker × job matches",
-            "Worker sees jobs + funded training",
+            "Job seeker sees jobs + funded training",
             "Employer & worker chat in-platform (AI in thread)",
             "Government tracks placements & retention",
           ].map((step, i) => (

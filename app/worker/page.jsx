@@ -77,7 +77,7 @@ export default function WorkerPortal() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <span className="pill-green">Worker Portal</span>
+          <span className="pill-green">Job Seeker</span>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">
             Build your Verified Skills Passport, see your matched jobs
           </h1>

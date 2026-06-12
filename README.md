@@ -33,7 +33,7 @@ Then open <http://localhost:3000>.
 | Page | Path | What to show in the pitch |
 |---|---|---|
 | Landing | `/` | One-screen positioning: workers, employers, government, plus a live preview of EcoPulse match cards. |
-| Worker Portal | `/worker` | Verified profile, simulated verification panel, AI-ranked job recommendations, funded training pathway recommendations. Edit any field to watch matches re-rank live. |
+| Job Seeker | `/worker` | Verified profile, simulated verification panel, AI-ranked job recommendations, funded training pathway recommendations. Edit any field to watch matches re-rank live. |
 | Employer Portal | `/employer` | Verified employer panel, job posting form, table of matched candidates with skills, reliability, match score, and a suggested next action. |
 | Matching Engine | `/matching` | The "AI" logic exposed — the weighted formula, a live per-component score breakdown for any worker × job pair, and a full sample matching table. Labeled as "MVP rule-based matching model — designed to evolve into ML prediction." |
 | Government Dashboard | `/government` | KPI tiles, placements by sector (bar chart), match outcomes funnel (donut), training completion trend (line), and industry demand table. |
@@ -41,7 +41,7 @@ Then open <http://localhost:3000>.
 ## Demo storyline (5 minutes)
 
 1. **Landing** — EcoPulse is workforce infrastructure for Malaysia's verified blue-collar economy, serving workers, Sdn Bhd employers, and government in one platform.
-2. **Worker Portal** — Ahmad Faizal (Penang Bayan Lepas) builds a verified profile, sees AI-ranked semiconductor / warehouse / QC jobs, and gets HRD Corp / TVET-funded training pathways tailored to him.
+2. **Job Seeker** — Ahmad Faizal (Penang Bayan Lepas) builds a verified profile, sees AI-ranked semiconductor / warehouse / QC jobs, and gets HRD Corp / TVET-funded training pathways tailored to him.
 3. **Employer Portal** — switch hats to Penang Precision Manufacturing Sdn Bhd; show ranked candidates with reliability scores and suggested actions.
 4. **Matching Engine** — open the formula, then change worker/job to demonstrate the score breakdown updating live.
 5. **Government Dashboard** — close on the outcomes story: B40 verified placements, HRD Corp levy utilisation by state (Penang / Selangor / Johor), training completion, retention, sector demand. Position SEA expansion (Singapore B2G credibility → Indonesia / Vietnam → China) as upside.
@@ -52,7 +52,7 @@ Then open <http://localhost:3000>.
 app/
   layout.jsx              # global shell + nav + footer
   page.jsx                # landing
-  worker/page.jsx         # worker portal
+  worker/page.jsx         # job seeker portal
   employer/page.jsx       # employer portal
   matching/page.jsx       # matching engine
   government/page.jsx     # government dashboard

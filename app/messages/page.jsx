@@ -176,7 +176,7 @@ function MessagesView() {
                 : "text-slate-600"
             }`}
           >
-            Worker view
+            Job seeker view
           </button>
           <button
             onClick={() => setView("employer")}
