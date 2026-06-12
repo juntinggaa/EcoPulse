@@ -28,6 +28,7 @@ import {
   atRiskTrainingRows,
   stateOutcomeBreakdown,
   sectorOutcomeBreakdown,
+  malaysiaTrainingHeatmap,
 } from "@/lib/mockData";
 import StatCard from "@/components/StatCard";
 
@@ -44,6 +45,258 @@ function retentionPillClass(value) {
   if (value >= 70) return "pill-green";
   if (value >= 60) return "pill-amber";
   return "pill-red";
+}
+
+const MALAYSIA_MAP_SHAPES = [
+  {
+    state: "Perlis",
+    code: "PLS",
+    d: "M140 36 L180 44 L172 76 L132 70 L124 50 Z",
+    labelX: 149,
+    labelY: 60,
+  },
+  {
+    state: "Kedah",
+    code: "KDH",
+    d: "M130 72 L185 78 L178 132 L120 134 L112 98 Z",
+    labelX: 147,
+    labelY: 110,
+  },
+  { state: "Penang", code: "PNG", circle: [103, 124, 15], labelX: 103, labelY: 128 },
+  {
+    state: "Perak",
+    code: "PRK",
+    d: "M125 136 L188 136 L198 220 L156 250 L112 212 Z",
+    labelX: 154,
+    labelY: 197,
+  },
+  {
+    state: "Kelantan",
+    code: "KTN",
+    d: "M195 72 L260 90 L260 145 L220 160 L178 132 L185 80 Z",
+    labelX: 223,
+    labelY: 120,
+  },
+  {
+    state: "Terengganu",
+    code: "TRG",
+    d: "M260 146 L294 175 L278 250 L230 228 L220 162 Z",
+    labelX: 260,
+    labelY: 206,
+  },
+  {
+    state: "Pahang",
+    code: "PHG",
+    d: "M198 222 L278 252 L290 310 L224 335 L165 292 L156 250 Z",
+    labelX: 226,
+    labelY: 288,
+  },
+  {
+    state: "Selangor",
+    code: "SGR",
+    d: "M112 220 L157 252 L163 290 L118 300 L92 270 Z",
+    labelX: 126,
+    labelY: 266,
+  },
+  { state: "Kuala Lumpur", code: "KL", circle: [139, 265, 9], labelX: 139, labelY: 268 },
+  { state: "Putrajaya", code: "PJ", circle: [150, 287, 7], labelX: 150, labelY: 290 },
+  {
+    state: "Negeri Sembilan",
+    code: "NS",
+    d: "M118 303 L165 294 L210 335 L178 365 L124 345 Z",
+    labelX: 160,
+    labelY: 334,
+  },
+  {
+    state: "Melaka",
+    code: "MLK",
+    d: "M132 350 L178 370 L166 395 L126 378 Z",
+    labelX: 151,
+    labelY: 374,
+  },
+  {
+    state: "Johor",
+    code: "JHR",
+    d: "M180 366 L230 340 L296 382 L266 430 L206 430 L166 396 Z",
+    labelX: 230,
+    labelY: 397,
+  },
+  {
+    state: "Sarawak",
+    code: "SWK",
+    d: "M470 305 C530 275 620 260 715 284 L795 322 L752 380 L640 392 L528 365 Z",
+    labelX: 630,
+    labelY: 335,
+  },
+  {
+    state: "Sabah",
+    code: "SBH",
+    d: "M765 205 L842 180 L918 205 L938 255 L890 300 L812 292 L760 250 Z",
+    labelX: 850,
+    labelY: 244,
+  },
+  { state: "Labuan", code: "LBN", circle: [780, 252, 8], labelX: 780, labelY: 255 },
+];
+
+function heatColor(value, max) {
+  const ratio = max ? value / max : 0;
+  if (ratio >= 0.8) return "#047857";
+  if (ratio >= 0.6) return "#059669";
+  if (ratio >= 0.4) return "#10b981";
+  if (ratio >= 0.2) return "#86efac";
+  return "#dcfce7";
+}
+
+function heatTextColor(value, max) {
+  return max && value / max >= 0.55 ? "#ffffff" : "#064e3b";
+}
+
+function MalaysiaTrainingMap({ data }) {
+  const dataByState = Object.fromEntries(data.map((row) => [row.state, row]));
+  const maxCompleted = Math.max(...data.map((row) => row.trainingCompleted));
+  const topStates = [...data]
+    .sort((a, b) => b.trainingCompleted - a.trainingCompleted)
+    .slice(0, 5);
+
+  return (
+    <div className="card p-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">
+            Malaysia training completion heatmap
+          </h2>
+          <p className="text-sm text-slate-500">
+            Darker green means more workers have completed funded training in
+            that state or federal territory.
+          </p>
+        </div>
+        <span className="pill-green">Training completed by region</span>
+      </div>
+
+      <div className="mt-5 grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 rounded-xl bg-slate-50 p-4">
+          <svg
+            viewBox="0 0 980 470"
+            role="img"
+            aria-label="Malaysia heatmap showing training completions by state"
+            className="h-[360px] w-full"
+          >
+            <rect width="980" height="470" rx="24" fill="#f8fafc" />
+            <text x="88" y="34" fill="#64748b" fontSize="13" fontWeight="600">
+              Peninsular Malaysia
+            </text>
+            <text x="620" y="204" fill="#64748b" fontSize="13" fontWeight="600">
+              Sabah & Sarawak
+            </text>
+
+            {MALAYSIA_MAP_SHAPES.map((shape) => {
+              const row = dataByState[shape.state];
+              const value = row?.trainingCompleted ?? 0;
+              const fill = heatColor(value, maxCompleted);
+              const labelColor = heatTextColor(value, maxCompleted);
+              const title = `${shape.state}: ${value} training completed`;
+
+              return (
+                <g key={shape.state}>
+                  <title>{title}</title>
+                  {shape.circle ? (
+                    <circle
+                      cx={shape.circle[0]}
+                      cy={shape.circle[1]}
+                      r={shape.circle[2]}
+                      fill={fill}
+                      stroke="#ffffff"
+                      strokeWidth="3"
+                    />
+                  ) : (
+                    <path
+                      d={shape.d}
+                      fill={fill}
+                      stroke="#ffffff"
+                      strokeWidth="3"
+                      strokeLinejoin="round"
+                    />
+                  )}
+                  <text
+                    x={shape.labelX}
+                    y={shape.labelY}
+                    textAnchor="middle"
+                    fill={labelColor}
+                    fontSize={shape.code.length > 2 ? "12" : "13"}
+                    fontWeight="700"
+                  >
+                    {shape.code}
+                  </text>
+                </g>
+              );
+            })}
+
+            <g transform="translate(700 404)">
+              <text x="0" y="-12" fill="#475569" fontSize="12" fontWeight="600">
+                Lower
+              </text>
+              {["#dcfce7", "#86efac", "#10b981", "#059669", "#047857"].map(
+                (color, index) => (
+                  <rect
+                    key={color}
+                    x={index * 34}
+                    y="0"
+                    width="30"
+                    height="14"
+                    rx="4"
+                    fill={color}
+                  />
+                )
+              )}
+              <text x="178" y="-12" fill="#475569" fontSize="12" fontWeight="600">
+                Higher
+              </text>
+            </g>
+          </svg>
+        </div>
+
+        <div className="rounded-xl border border-slate-100 p-4">
+          <div className="text-sm font-semibold text-slate-800">
+            Highest training completion
+          </div>
+          <div className="mt-3 divide-y divide-slate-100">
+            {topStates.map((row, index) => (
+              <div
+                key={row.state}
+                className="flex items-center justify-between gap-3 py-2"
+              >
+                <div>
+                  <div className="text-sm font-medium">{row.state}</div>
+                  <div className="text-xs text-slate-500">
+                    {row.placements} placements · {row.retention30Day}% 30-day retention
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-3 w-3 rounded-full"
+                    style={{
+                      backgroundColor: heatColor(
+                        row.trainingCompleted,
+                        maxCompleted
+                      ),
+                    }}
+                  />
+                  <span className={index < 2 ? "pill-green" : "pill-slate"}>
+                    {row.trainingCompleted}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800">
+            Government can use this view to see where funded training is
+            converting into completion, then compare it with placement and
+            retention signals.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function GovernmentDashboard() {
@@ -106,6 +359,8 @@ export default function GovernmentDashboard() {
           accent="red"
         />
       </div>
+
+      <MalaysiaTrainingMap data={malaysiaTrainingHeatmap} />
 
       <div>
         <div className="card p-6">
