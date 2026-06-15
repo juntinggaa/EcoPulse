@@ -14,6 +14,7 @@ import {
   Tooltip,
   CartesianGrid,
   Legend,
+  LabelList,
 } from "recharts";
 import {
   governmentMetrics,
@@ -33,6 +34,32 @@ import {
 import StatCard from "@/components/StatCard";
 
 const SECTOR_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"];
+const TRAFFIC_LIGHT = {
+  low: {
+    color: "#ef4444",
+    text: "#7f1d1d",
+    pill: "pill-red",
+    label: "Needs attention",
+  },
+  medium: {
+    color: "#f59e0b",
+    text: "#78350f",
+    pill: "pill-amber",
+    label: "Moderate",
+  },
+  high: {
+    color: "#10b981",
+    text: "#064e3b",
+    pill: "pill-green",
+    label: "Strong",
+  },
+  neutral: {
+    color: "#64748b",
+    text: "#334155",
+    pill: "pill-slate",
+    label: "Baseline",
+  },
+};
 
 function riskPillClass(level) {
   const value = level.toLowerCase();
@@ -46,6 +73,33 @@ function retentionPillClass(value) {
   if (value >= 60) return "pill-amber";
   return "pill-red";
 }
+
+const FUNNEL_STAGE_STATUS = {
+  "Verified workers": {
+    level: "neutral",
+    label: "Baseline verified pool",
+  },
+  "Training enrolled": {
+    level: "low",
+    label: "Needs enrolment growth",
+  },
+  "Training completed": {
+    level: "high",
+    label: "Strong completion",
+  },
+  "Job matched": {
+    level: "medium",
+    label: "Matching pipeline",
+  },
+  "Job placed": {
+    level: "high",
+    label: "Strong placement",
+  },
+  "30-day retained": {
+    level: "medium",
+    label: "Watch retention",
+  },
+};
 
 const MALAYSIA_MAP_SHAPES = [
   {
@@ -138,17 +192,19 @@ const MALAYSIA_MAP_SHAPES = [
   { state: "Labuan", code: "LBN", circle: [780, 252, 8], labelX: 780, labelY: 255 },
 ];
 
-function heatColor(value, max) {
+function trafficLevelForTraining(value, max) {
   const ratio = max ? value / max : 0;
-  if (ratio >= 0.8) return "#047857";
-  if (ratio >= 0.6) return "#059669";
-  if (ratio >= 0.4) return "#10b981";
-  if (ratio >= 0.2) return "#86efac";
-  return "#dcfce7";
+  if (ratio >= 0.65) return "high";
+  if (ratio >= 0.35) return "medium";
+  return "low";
+}
+
+function heatColor(value, max) {
+  return TRAFFIC_LIGHT[trafficLevelForTraining(value, max)].color;
 }
 
 function heatTextColor(value, max) {
-  return max && value / max >= 0.55 ? "#ffffff" : "#064e3b";
+  return trafficLevelForTraining(value, max) === "high" ? "#ffffff" : "#111827";
 }
 
 function MalaysiaTrainingMap({ data }) {
@@ -166,11 +222,12 @@ function MalaysiaTrainingMap({ data }) {
             Malaysia training completion heatmap
           </h2>
           <p className="text-sm text-slate-500">
-            Darker green means more workers have completed funded training in
-            that state or federal territory.
+            Traffic-light view of funded training completion by state or
+            federal territory: red needs attention, amber is moderate, green is
+            strong.
           </p>
         </div>
-        <span className="pill-green">Training completed by region</span>
+        <span className="pill-green">Training completion by region</span>
       </div>
 
       <div className="mt-5 grid lg:grid-cols-3 gap-6">
@@ -194,7 +251,8 @@ function MalaysiaTrainingMap({ data }) {
               const value = row?.trainingCompleted ?? 0;
               const fill = heatColor(value, maxCompleted);
               const labelColor = heatTextColor(value, maxCompleted);
-              const title = `${shape.state}: ${value} training completed`;
+              const level = trafficLevelForTraining(value, maxCompleted);
+              const title = `${shape.state}: ${value} training completed · ${TRAFFIC_LIGHT[level].label}`;
 
               return (
                 <g key={shape.state}>
@@ -227,30 +285,43 @@ function MalaysiaTrainingMap({ data }) {
                   >
                     {shape.code}
                   </text>
+                  <text
+                    x={shape.labelX}
+                    y={shape.labelY + 14}
+                    textAnchor="middle"
+                    fill={labelColor}
+                    fontSize="11"
+                    fontWeight="700"
+                  >
+                    {value}
+                  </text>
                 </g>
               );
             })}
 
-            <g transform="translate(700 404)">
-              <text x="0" y="-12" fill="#475569" fontSize="12" fontWeight="600">
-                Lower
+            <g transform="translate(600 404)">
+              <text x="0" y="-16" fill="#334155" fontSize="13" fontWeight="700">
+                Completion status
               </text>
-              {["#dcfce7", "#86efac", "#10b981", "#059669", "#047857"].map(
-                (color, index) => (
+              {[
+                ["Needs attention", TRAFFIC_LIGHT.low.color],
+                ["Moderate", TRAFFIC_LIGHT.medium.color],
+                ["Strong", TRAFFIC_LIGHT.high.color],
+              ].map(([label, color], index) => (
+                <g key={label} transform={`translate(${index * 118} 0)`}>
                   <rect
-                    key={color}
-                    x={index * 34}
+                    x="0"
                     y="0"
-                    width="30"
-                    height="14"
+                    width="18"
+                    height="18"
                     rx="4"
                     fill={color}
                   />
-                )
-              )}
-              <text x="178" y="-12" fill="#475569" fontSize="12" fontWeight="600">
-                Higher
-              </text>
+                  <text x="24" y="14" fill="#475569" fontSize="12" fontWeight="600">
+                    {label}
+                  </text>
+                </g>
+              ))}
             </g>
           </svg>
         </div>
@@ -273,6 +344,19 @@ function MalaysiaTrainingMap({ data }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <span
+                    className={
+                      TRAFFIC_LIGHT[
+                        trafficLevelForTraining(row.trainingCompleted, maxCompleted)
+                      ].pill
+                    }
+                  >
+                    {
+                      TRAFFIC_LIGHT[
+                        trafficLevelForTraining(row.trainingCompleted, maxCompleted)
+                      ].label
+                    }
+                  </span>
+                  <span
                     className="h-3 w-3 rounded-full"
                     style={{
                       backgroundColor: heatColor(
@@ -282,7 +366,7 @@ function MalaysiaTrainingMap({ data }) {
                     }}
                   />
                   <span className={index < 2 ? "pill-green" : "pill-slate"}>
-                    {row.trainingCompleted}
+                    {row.trainingCompleted} completed
                   </span>
                 </div>
               </div>
@@ -299,8 +383,24 @@ function MalaysiaTrainingMap({ data }) {
   );
 }
 
+function funnelRowsWithStatus(rows) {
+  return rows.map((row) => {
+    const meta = FUNNEL_STAGE_STATUS[row.stage] || {
+      level: "neutral",
+      label: "Track",
+    };
+    return {
+      ...row,
+      ...meta,
+      fill: TRAFFIC_LIGHT[meta.level].color,
+      chartLabel: `${row.count.toLocaleString()} · ${meta.label}`,
+    };
+  });
+}
+
 export default function GovernmentDashboard() {
   const m = governmentMetrics;
+  const funnelRows = funnelRowsWithStatus(trainingToPlacementFunnel);
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -368,13 +468,20 @@ export default function GovernmentDashboard() {
           <p className="text-sm text-slate-500">
             Matched workers move through funded training, training attendance,
             completion, job placement, work attendance, and 30-day retention.
+            Traffic-light labels show where government should intervene.
           </p>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            <span className="pill-red">Red = needs attention</span>
+            <span className="pill-amber">Amber = watch / moderate</span>
+            <span className="pill-green">Green = strong outcome</span>
+            <span className="pill-slate">Grey = baseline</span>
+          </div>
           <div className="mt-4 h-[420px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={trainingToPlacementFunnel}
+                data={funnelRows}
                 layout="vertical"
-                margin={{ left: 40, right: 40 }}
+                margin={{ left: 40, right: 210 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis type="number" fontSize={12} stroke="#64748b" />
@@ -387,15 +494,37 @@ export default function GovernmentDashboard() {
                 />
                 <Tooltip />
                 <Bar dataKey="count" radius={[0, 6, 6, 0]}>
-                  {trainingToPlacementFunnel.map((_, i) => (
-                    <Cell
-                      key={i}
-                      fill={`hsl(${158 - i * 8}, 70%, ${50 - i * 2}%)`}
-                    />
+                  {funnelRows.map((row) => (
+                    <Cell key={row.stage} fill={row.fill} />
                   ))}
+                  <LabelList
+                    dataKey="chartLabel"
+                    position="right"
+                    fill="#334155"
+                    fontSize={12}
+                    fontWeight={700}
+                  />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+          </div>
+          <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+            {funnelRows.map((row) => (
+              <div
+                key={row.stage}
+                className="rounded-lg border border-slate-100 bg-slate-50/60 p-3"
+              >
+                <div className="font-semibold text-slate-800">{row.stage}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className={TRAFFIC_LIGHT[row.level].pill}>
+                    {row.label}
+                  </span>
+                  <span className="text-slate-500">
+                    {row.count.toLocaleString()} people
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
           <div className="mt-2 text-xs text-slate-500">
             Conversion: {Math.round(
